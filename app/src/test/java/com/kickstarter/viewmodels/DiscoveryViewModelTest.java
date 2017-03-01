@@ -9,6 +9,8 @@ import com.kickstarter.factories.UserFactory;
 import com.kickstarter.libs.Environment;
 import com.kickstarter.libs.MockCurrentUser;
 import com.kickstarter.libs.rx.transformers.Transformers;
+import com.kickstarter.libs.utils.DiscoveryUtils;
+import com.kickstarter.models.Category;
 import com.kickstarter.services.DiscoveryParams;
 import com.kickstarter.services.apiresponses.InternalBuildEnvelope;
 import com.kickstarter.ui.adapters.data.NavigationDrawerData;
@@ -59,9 +61,13 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
     drawerIsOpen.assertNoValues();
     koalaTest.assertNoValues();
 
-    // Open drawer and click a top filter.
+    // Open drawer and click the top PWL filter.
     vm.inputs.openDrawer(true);
-    vm.inputs.topFilterViewHolderRowClick(null, NavigationDrawerData.Section.Row.builder().build());
+    vm.inputs.topFilterViewHolderRowClick(null, NavigationDrawerData.Section.Row
+      .builder()
+      .params(DiscoveryParams.builder().staffPicks(true).build())
+      .build()
+    );
 
     // Drawer data should emit. Drawer should open, then close upon selection.
     navigationDrawerDataEmitted.assertValueCount(2);
@@ -101,26 +107,25 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
     final Intent intent = new Intent(Intent.ACTION_MAIN);
     vm.intent(intent);
 
-    // Notify activity that pager adapter has created fragment pages.
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 0);
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 1);
+    // Initial HOME page selected.
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 0);
 
     // Sort tab should be expanded.
     expandSortTabLayout.assertValues(true);
 
     // Toolbar params should be loaded with initial params.
-    updateToolbarWithParams.assertValues(DiscoveryParams.builder().staffPicks(true).build());
+    updateToolbarWithParams.assertValues(DiscoveryParams.builder().build());
 
     // Select POPULAR sort.
-    vm.inputs.pageChanged(1);
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 1);
 
     // Sort tab should be expanded.
     expandSortTabLayout.assertValues(true, true);
 
     // Unchanged toolbar params should not emit.
-    updateToolbarWithParams.assertValues(DiscoveryParams.builder().staffPicks(true).build());
+    updateToolbarWithParams.assertValues(DiscoveryParams.builder().build());
 
-    // Select EVERYTHING filter from drawer.
+    // Select ALL PROJECTS filter from drawer.
     vm.inputs.topFilterViewHolderRowClick(null,
       NavigationDrawerData.Section.Row.builder().params(DiscoveryParams.builder().build()).build()
     );
@@ -146,9 +151,8 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
     final TestSubscriber<Boolean> rotatedExpandSortTabLayout = new TestSubscriber<>();
     vm.outputs.expandSortTabLayout().subscribe(rotatedExpandSortTabLayout);
 
-    // Simulate recreating current and next fragment.
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 0);
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 1);
+    // Simulate recreating and setting POPULAR fragment, the previous position before rotation.
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 1);
 
     // Sort tab and toolbar params should emit again with same params.
     rotatedExpandSortTabLayout.assertValues(true);
@@ -191,31 +195,30 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
     final DiscoveryViewModel vm = new DiscoveryViewModel(environment());
 
     final TestSubscriber<DiscoveryParams> updateParams= new TestSubscriber<>();
-    vm.outputs.updateParamsForPage().map(pair -> pair.first).subscribe(updateParams);
+    vm.outputs.updateParamsForPage().subscribe(updateParams);
     final TestSubscriber<Integer> updatePage = new TestSubscriber<>();
-    vm.outputs.updateParamsForPage().map(pair -> pair.second).subscribe(updatePage);
+    vm.outputs.updateParamsForPage().map(params -> DiscoveryUtils.positionFromSort(params.sort())).subscribe(updatePage);
 
     // Start initial activity.
     final Intent intent = new Intent(Intent.ACTION_MAIN);
     vm.intent(intent);
 
-    // Notify activity when pager adapter pages are created.
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 0);
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 1);
+    // Initial HOME page selected.
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 0);
 
     // Initial params should emit. Page should not be updated yet.
     updateParams.assertValues(
-      DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build()
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build()
     );
     updatePage.assertValues(0);
 
     // Select POPULAR sort position.
-    vm.inputs.pageChanged(1);
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 1);
 
     // Params and page should update with new POPULAR sort values.
     updateParams.assertValues(
-      DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build(),
-      DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.POPULAR).build()
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build(),
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.POPULAR).build()
     );
     updatePage.assertValues(0, 1);
 
@@ -228,37 +231,36 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
 
     // Params should update with new category; page should remain the same.
     updateParams.assertValues(
-      DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build(),
-      DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.POPULAR).build(),
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build(),
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.POPULAR).build(),
       DiscoveryParams.builder().sort(DiscoveryParams.Sort.POPULAR).category(CategoryFactory.artCategory()).build()
     );
     updatePage.assertValues(0, 1, 1);
     koalaTest.assertValues("Discover Modal Selected Filter");
 
-    // Select MAGIC sort position.
-    vm.inputs.pageChanged(0);
+    // Select HOME sort position.
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 0);
 
-    // Params and page should update with new MAGIC sort value.
+    // Params and page should update with new HOME sort value.
     updateParams.assertValues(
-      DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build(),
-      DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.POPULAR).build(),
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build(),
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.POPULAR).build(),
       DiscoveryParams.builder().sort(DiscoveryParams.Sort.POPULAR).category(CategoryFactory.artCategory()).build(),
-      DiscoveryParams.builder().sort(DiscoveryParams.Sort.MAGIC).category(CategoryFactory.artCategory()).build()
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).category(CategoryFactory.artCategory()).build()
     );
     updatePage.assertValues(0, 1, 1, 0);
 
     // Simulate rotating the device and hitting initial inputs again.
     final TestSubscriber<DiscoveryParams> rotatedUpdateParams= new TestSubscriber<>();
-    vm.outputs.updateParamsForPage().map(pair -> pair.first).subscribe(rotatedUpdateParams);
+    vm.outputs.updateParamsForPage().subscribe(rotatedUpdateParams);
     final TestSubscriber<Integer> rotatedUpdatePage = new TestSubscriber<>();
-    vm.outputs.updateParamsForPage().map(pair -> pair.second).subscribe(rotatedUpdatePage);
+    vm.outputs.updateParamsForPage().map(params -> DiscoveryUtils.positionFromSort(params.sort())).subscribe(rotatedUpdatePage);
 
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 0);
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 1);
-
-    // Params and page should not update.
-    rotatedUpdateParams.assertNoValues();
-    rotatedUpdatePage.assertNoValues();
+    // Should emit again with same params.
+    rotatedUpdateParams.assertValues(
+      DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).category(CategoryFactory.artCategory()).build()
+    );
+    rotatedUpdatePage.assertValues(0);
   }
 
   @Test
@@ -272,17 +274,13 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
     final Intent intent = new Intent(Intent.ACTION_MAIN);
     vm.intent(intent);
 
-    // Notify activity when pager adapter pages are created.
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 0);
-    vm.inputs.discoveryPagerAdapterCreatedPage(null, 1);
+    clearPages.assertNoValues();
+
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 1);
 
     clearPages.assertNoValues();
 
-    vm.inputs.pageChanged(1);
-
-    clearPages.assertNoValues();
-
-    vm.inputs.pageChanged(4);
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 4);
 
     clearPages.assertNoValues();
 
@@ -295,7 +293,7 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
 
     clearPages.assertValues(Arrays.asList(0, 1, 2, 3));
 
-    vm.inputs.pageChanged(1);
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 1);
 
     // Select MUSIC category from the drawer.
     vm.inputs.childFilterViewHolderRowClick(null,
@@ -305,5 +303,43 @@ public class DiscoveryViewModelTest extends KSRobolectricTestCase {
     );
 
     clearPages.assertValues(Arrays.asList(0, 1, 2, 3), Arrays.asList(0, 2, 3, 4));
+  }
+
+  @Test
+  public void testRootCategoriesEmitWithPosition() {
+    final DiscoveryViewModel vm = new DiscoveryViewModel(environment());
+
+    final TestSubscriber<List<Category>> rootCategories = new TestSubscriber<>();
+    final TestSubscriber<Integer> position = new TestSubscriber<>();
+    vm.outputs.rootCategoriesAndPosition().map(cp -> cp.first).subscribe(rootCategories);
+    vm.outputs.rootCategoriesAndPosition().map(cp -> cp.second).subscribe(position);
+
+    // Start initial activity.
+    vm.intent(new Intent(Intent.ACTION_MAIN));
+
+    // Initial HOME page selected.
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 0);
+
+    // Root categories should emit for the initial HOME sort position.
+    rootCategories.assertValueCount(1);
+    position.assertValues(0);
+
+    // Select POPULAR sort position.
+    vm.inputs.discoveryPagerAdapterSetPrimaryPage(null, 1);
+
+    // Root categories should emit for the POPULAR sort position.
+    rootCategories.assertValueCount(2);
+    position.assertValues(0, 1);
+
+    // Select ART category from the drawer.
+    vm.inputs.childFilterViewHolderRowClick(null,
+      NavigationDrawerData.Section.Row.builder()
+        .params(DiscoveryParams.builder().category(CategoryFactory.artCategory()).build())
+        .build()
+    );
+
+    // Root categories should not emit again for the same position.
+    rootCategories.assertValueCount(2);
+    position.assertValues(0, 1);
   }
 }

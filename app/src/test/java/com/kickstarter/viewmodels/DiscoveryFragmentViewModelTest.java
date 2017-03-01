@@ -11,6 +11,7 @@ import com.kickstarter.factories.ProjectFactory;
 import com.kickstarter.factories.UserFactory;
 import com.kickstarter.libs.CurrentUserType;
 import com.kickstarter.libs.Environment;
+import com.kickstarter.libs.KoalaEvent;
 import com.kickstarter.libs.MockCurrentUser;
 import com.kickstarter.libs.RefTag;
 import com.kickstarter.libs.preferences.MockIntPreference;
@@ -39,25 +40,28 @@ public class DiscoveryFragmentViewModelTest extends KSRobolectricTestCase {
     final TestSubscriber<Boolean> hasProjects = new TestSubscriber<>();
     vm.outputs.projects().map(ListUtils::nonEmpty).subscribe(hasProjects);
 
-    // Load initial params from activity.
-    vm.inputs.paramsFromActivity(DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build());
+    // Load initial params and root categories from activity.
+    vm.inputs.paramsFromActivity(DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build());
+    vm.inputs.rootCategories(CategoryFactory.rootCategories());
 
     // Should emit current fragment's projects.
-    hasProjects.assertValues(false, true);
+    hasProjects.assertValues(true);
     koalaTest.assertValues("Discover List View");
 
     // Select a new category.
     vm.inputs.paramsFromActivity(
       DiscoveryParams.builder()
         .category(CategoryFactory.artCategory())
-        .sort(DiscoveryParams.Sort.MAGIC)
+        .sort(DiscoveryParams.Sort.HOME)
         .build()
     );
-    hasProjects.assertValues(false, true, false, true);
+
+    // Projects are cleared, new projects load.
+    hasProjects.assertValues(true, false, true);
     koalaTest.assertValues("Discover List View", "Discover List View");
 
     vm.inputs.clearPage();
-    hasProjects.assertValues(false, true, false, true, false);
+    hasProjects.assertValues(true, false, true, false);
   }
 
   @Test
@@ -68,13 +72,14 @@ public class DiscoveryFragmentViewModelTest extends KSRobolectricTestCase {
     vm.outputs.projects().filter(ListUtils::nonEmpty).subscribe(projects);
 
     // Initial load.
-    vm.inputs.paramsFromActivity(DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build());
+    vm.inputs.paramsFromActivity(DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build());
+    vm.inputs.rootCategories(CategoryFactory.rootCategories());
 
     projects.assertValueCount(1);
     koalaTest.assertValues("Discover List View");
 
-    // Popularity tab clicked.
-    vm.inputs.paramsFromActivity(DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.POPULAR).build());
+    // Popular tab clicked.
+    vm.inputs.paramsFromActivity(DiscoveryParams.builder().sort(DiscoveryParams.Sort.POPULAR).build());
     projects.assertValueCount(2);
     koalaTest.assertValues("Discover List View", "Discover List View");
   }
@@ -93,7 +98,8 @@ public class DiscoveryFragmentViewModelTest extends KSRobolectricTestCase {
     vm.outputs.projects().filter(ListUtils::nonEmpty).subscribe(projects);
 
     // Initial load.
-    vm.inputs.paramsFromActivity(DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build());
+    vm.inputs.rootCategories(CategoryFactory.rootCategories());
+    vm.inputs.paramsFromActivity(DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build());
 
     // Projects should emit.
     projects.assertValueCount(1);
@@ -133,8 +139,9 @@ public class DiscoveryFragmentViewModelTest extends KSRobolectricTestCase {
     final TestSubscriber<Boolean> shouldShowOnboardingViewTest = new TestSubscriber<>();
     vm.outputs.shouldShowOnboardingView().subscribe(shouldShowOnboardingViewTest);
 
-    // Initial magic staff pick params.
-    vm.inputs.paramsFromActivity(DiscoveryParams.builder().staffPicks(true).sort(DiscoveryParams.Sort.MAGIC).build());
+    // Initial home all projects params.
+    vm.inputs.paramsFromActivity(DiscoveryParams.builder().sort(DiscoveryParams.Sort.HOME).build());
+    vm.inputs.rootCategories(CategoryFactory.rootCategories());
 
     // Should show onboarding view.
     shouldShowOnboardingViewTest.assertValues(true);
@@ -186,6 +193,7 @@ public class DiscoveryFragmentViewModelTest extends KSRobolectricTestCase {
     showActivityUpdate.assertNoValues();
     vm.inputs.activitySampleProjectViewHolderUpdateClicked(null, ActivityFactory.updateActivity());
     showActivityUpdate.assertValueCount(1);
+    koalaTest.assertValues(KoalaEvent.VIEWED_UPDATE);
 
     // Clicking login on onboarding view should show login tout.
     showLoginTout.assertNoValues();

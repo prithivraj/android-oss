@@ -24,7 +24,6 @@ import com.kickstarter.libs.utils.SocialUtils;
 import com.kickstarter.models.Category;
 import com.kickstarter.models.Photo;
 import com.kickstarter.models.Project;
-import com.kickstarter.viewmodels.DiscoveryViewModel;
 import com.squareup.picasso.Picasso;
 
 import org.joda.time.DateTime;
@@ -73,7 +72,6 @@ public final class ProjectCardViewHolder extends KSViewHolder {
 
   protected @BindDrawable(R.drawable.gray_gradient) Drawable grayGradientDrawable;
 
-  protected @BindString(R.string.project_creator_by_creator) String byCreatorString;
   protected @BindString(R.string.discovery_baseball_card_status_banner_canceled_date) String bannerCanceledDateString;
   protected @BindString(R.string.discovery_baseball_card_status_banner_suspended_date) String bannerSuspendedDateString;
   protected @BindString(R.string.discovery_baseball_card_status_banner_funding_unsuccessful_date) String fundingUnsuccessfulDateString;
@@ -84,7 +82,6 @@ public final class ProjectCardViewHolder extends KSViewHolder {
   private Project project;
   private Context context;
   private final Delegate delegate;
-  private DiscoveryViewModel viewModel;
 
   protected @Inject KSString ksString;
 

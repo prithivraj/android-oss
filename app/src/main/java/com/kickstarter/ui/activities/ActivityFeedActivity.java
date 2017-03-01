@@ -35,8 +35,8 @@ import butterknife.ButterKnife;
 
 import static com.kickstarter.libs.rx.transformers.Transformers.observeForUI;
 
-@RequiresActivityViewModel(ActivityFeedViewModel.class)
-public final class ActivityFeedActivity extends BaseActivity<ActivityFeedViewModel> {
+@RequiresActivityViewModel(ActivityFeedViewModel.ViewModel.class)
+public final class ActivityFeedActivity extends BaseActivity<ActivityFeedViewModel.ViewModel> {
   private ActivityFeedAdapter adapter;
   protected @Bind(R.id.recycler_view) RecyclerView recyclerView;
   protected @Bind(R.id.activity_feed_swipe_refresh_layout) SwipeRefreshLayout swipeRefreshLayout;

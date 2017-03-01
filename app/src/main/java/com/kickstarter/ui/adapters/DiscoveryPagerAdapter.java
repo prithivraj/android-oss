@@ -4,7 +4,10 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
+import android.view.ViewGroup;
 
+import com.kickstarter.libs.utils.DiscoveryUtils;
+import com.kickstarter.models.Category;
 import com.kickstarter.services.DiscoveryParams;
 import com.kickstarter.ui.ArgumentsKey;
 import com.kickstarter.ui.fragments.DiscoveryFragment;
@@ -19,7 +22,7 @@ public final class DiscoveryPagerAdapter extends FragmentPagerAdapter {
   private List<String> pageTitles;
 
   public interface Delegate {
-    void discoveryPagerAdapterCreatedPage(DiscoveryPagerAdapter adapter, int position);
+    void discoveryPagerAdapterSetPrimaryPage(DiscoveryPagerAdapter adapter, int position);
   }
 
   public DiscoveryPagerAdapter(final @NonNull FragmentManager fragmentManager, final @NonNull List<String> pageTitles,
@@ -31,10 +34,14 @@ public final class DiscoveryPagerAdapter extends FragmentPagerAdapter {
   }
 
   @Override
-  public Fragment getItem(final int position) {
-    final Fragment result = DiscoveryFragment.newInstance(position);
-    delegate.discoveryPagerAdapterCreatedPage(this, position);
-    return result;
+  public void setPrimaryItem(final @NonNull ViewGroup container, final int position, final @NonNull Object object) {
+    super.setPrimaryItem(container, position, object);
+    delegate.discoveryPagerAdapterSetPrimaryPage(this, position);
+  }
+
+  @Override
+  public @NonNull Fragment getItem(final int position) {
+    return DiscoveryFragment.newInstance(position);
   }
 
   @Override
@@ -48,14 +55,27 @@ public final class DiscoveryPagerAdapter extends FragmentPagerAdapter {
   }
 
   /**
-   * Take current params from activity and pass to the appropriate fragment.
+   * Passes along root categories to its fragment position to help fetch appropriate projects.
    */
-  public void takeParams(final @NonNull DiscoveryParams params, final int currentPosition) {
+  public void takeCategoriesForPosition(final @NonNull List<Category> categories, final int position) {
     Observable.from(fragmentManager.getFragments())
       .ofType(DiscoveryFragment.class)
       .filter(frag -> {
         final int fragmentPosition = frag.getArguments().getInt(ArgumentsKey.DISCOVERY_SORT_POSITION);
-        return currentPosition == fragmentPosition;
+        return fragmentPosition == position;
+      })
+      .subscribe(frag -> frag.takeCategories(categories));
+  }
+
+  /**
+   * Take current params from activity and pass to the appropriate fragment.
+   */
+  public void takeParams(final @NonNull DiscoveryParams params) {
+    Observable.from(fragmentManager.getFragments())
+      .ofType(DiscoveryFragment.class)
+      .filter(frag -> {
+        final int fragmentPosition = frag.getArguments().getInt(ArgumentsKey.DISCOVERY_SORT_POSITION);
+        return DiscoveryUtils.positionFromSort(params.sort()) == fragmentPosition;
       })
       .subscribe(frag -> frag.updateParams(params));
   }

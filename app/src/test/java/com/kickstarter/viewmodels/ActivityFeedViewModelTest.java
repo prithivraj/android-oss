@@ -5,6 +5,7 @@ import com.kickstarter.factories.ActivityFactory;
 import com.kickstarter.factories.UserFactory;
 import com.kickstarter.libs.CurrentUserType;
 import com.kickstarter.libs.Environment;
+import com.kickstarter.libs.KoalaEvent;
 import com.kickstarter.libs.MockCurrentUser;
 import com.kickstarter.models.Activity;
 import com.kickstarter.models.Project;
@@ -21,7 +22,7 @@ public class ActivityFeedViewModelTest extends KSRobolectricTestCase {
 
   @Test
   public void testActivitiesEmit() {
-    final ActivityFeedViewModel vm = new ActivityFeedViewModel(environment());
+    final ActivityFeedViewModel.ViewModel vm = new ActivityFeedViewModel.ViewModel(environment());
 
     final TestSubscriber<List<Activity>> activities = new TestSubscriber<>();
     vm.outputs.activities().subscribe(activities);
@@ -31,17 +32,17 @@ public class ActivityFeedViewModelTest extends KSRobolectricTestCase {
 
     // Activities should emit.
     activities.assertValueCount(1);
-    koalaTest.assertValue("Activity View");
+    koalaTest.assertValue(KoalaEvent.ACTIVITY_VIEW);
 
     // Paginate.
     vm.inputs.nextPage();
     activities.assertValueCount(1);
-    koalaTest.assertValues("Activity View", "Activity Load More");
+    koalaTest.assertValues(KoalaEvent.ACTIVITY_VIEW, KoalaEvent.ACTIVITY_LOAD_MORE);
   }
 
   @Test
   public void testClickingInterfaceElements() {
-    final ActivityFeedViewModel vm = new ActivityFeedViewModel(environment());
+    final ActivityFeedViewModel.ViewModel vm = new ActivityFeedViewModel.ViewModel(environment());
 
     final TestSubscriber<Void> goToDiscovery = new TestSubscriber<>();
     vm.outputs.goToDiscovery().subscribe(goToDiscovery);
@@ -59,7 +60,9 @@ public class ActivityFeedViewModelTest extends KSRobolectricTestCase {
     goToLogin.assertNoValues();
     goToProject.assertNoValues();
     goToProjectUpdate.assertNoValues();
+    koalaTest.assertValues(KoalaEvent.ACTIVITY_VIEW);
 
+    // Empty activity feed clicks do not trigger events yet.
     vm.inputs.emptyActivityFeedDiscoverProjectsClicked(null);
     goToDiscovery.assertValueCount(1);
 
@@ -70,10 +73,20 @@ public class ActivityFeedViewModelTest extends KSRobolectricTestCase {
     vm.inputs.projectStateChangedClicked(null, ActivityFactory.projectStateChangedActivity());
     vm.inputs.projectStateChangedPositiveClicked(null, ActivityFactory.projectStateChangedPositiveActivity());
     vm.inputs.projectUpdateProjectClicked(null, ActivityFactory.updateActivity());
+
+    koalaTest.assertValues(
+      KoalaEvent.ACTIVITY_VIEW, KoalaEvent.ACTIVITY_VIEW_ITEM, KoalaEvent.ACTIVITY_VIEW_ITEM, KoalaEvent.ACTIVITY_VIEW_ITEM,
+      KoalaEvent.ACTIVITY_VIEW_ITEM
+    );
     goToProject.assertValueCount(4);
 
     vm.inputs.projectUpdateClicked(null, ActivityFactory.activity());
+
     goToProjectUpdate.assertValueCount(1);
+    koalaTest.assertValues(
+      KoalaEvent.ACTIVITY_VIEW, KoalaEvent.ACTIVITY_VIEW_ITEM, KoalaEvent.ACTIVITY_VIEW_ITEM, KoalaEvent.ACTIVITY_VIEW_ITEM,
+      KoalaEvent.ACTIVITY_VIEW_ITEM, KoalaEvent.VIEWED_UPDATE
+    );
   }
 
   @Test
@@ -86,7 +99,7 @@ public class ActivityFeedViewModelTest extends KSRobolectricTestCase {
       .currentUser(currentUser)
       .build();
 
-    final ActivityFeedViewModel vm = new ActivityFeedViewModel(environment);
+    final ActivityFeedViewModel.ViewModel vm = new ActivityFeedViewModel.ViewModel(environment);
 
     final TestSubscriber<List<Activity>> activities = new TestSubscriber<>();
     vm.outputs.activities().subscribe(activities);

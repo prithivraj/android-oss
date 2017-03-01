@@ -12,7 +12,6 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 
-import com.jakewharton.rxbinding.support.v4.view.RxViewPager;
 import com.jakewharton.rxbinding.support.v4.widget.RxDrawerLayout;
 import com.kickstarter.KSApplication;
 import com.kickstarter.R;
@@ -38,6 +37,7 @@ import javax.inject.Inject;
 import butterknife.Bind;
 import butterknife.BindString;
 import butterknife.ButterKnife;
+import rx.android.schedulers.AndroidSchedulers;
 
 import static com.kickstarter.libs.rx.transformers.Transformers.observeForUI;
 import static com.kickstarter.libs.utils.TransitionUtils.slideInFromRight;
@@ -61,10 +61,10 @@ public final class DiscoveryActivity extends BaseActivity<DiscoveryViewModel> {
 
   protected @BindString(R.string.A_newer_build_is_available) String aNewerBuildIsAvailableString;
   protected @BindString(R.string.Upgrade_app) String upgradeAppString;
-  protected @BindString(R.string.discovery_sort_types_magic) String magicString;
-  protected @BindString(R.string.discovery_sort_types_popularity) String popularityString;
+  protected @BindString(R.string.Home) String homeString;
+  protected @BindString(R.string.Popular) String popularString;
   protected @BindString(R.string.discovery_sort_types_newest) String newestString;
-  protected @BindString(R.string.discovery_sort_types_end_date) String endDateString;
+  protected @BindString(R.string.Ending_soon) String endingSoonString;
   protected @BindString(R.string.discovery_sort_types_most_funded) String mostFundedString;
 
   @Override
@@ -80,18 +80,11 @@ public final class DiscoveryActivity extends BaseActivity<DiscoveryViewModel> {
     drawerAdapter = new DiscoveryDrawerAdapter(viewModel.inputs);
     drawerRecyclerView.setAdapter(drawerAdapter);
 
-    final List<String> viewPagerTitles = Arrays.asList(magicString, popularityString, newestString, endDateString,
+    final List<String> viewPagerTitles = Arrays.asList(homeString, popularString, newestString, endingSoonString,
       mostFundedString);
     pagerAdapter = new DiscoveryPagerAdapter(getSupportFragmentManager(), viewPagerTitles, viewModel.inputs);
     sortViewPager.setAdapter(pagerAdapter);
     sortTabLayout.setupWithViewPager(sortViewPager);
-
-    RxViewPager.pageSelections(sortViewPager)
-      // pagerAdapter is not ready yet - skip the first value
-      // RxViewPager emits immediately on subscribe.
-      .skip(1)
-      .compose(bindToLifecycle())
-      .subscribe(viewModel.inputs::pageChanged);
 
     viewModel.outputs.expandSortTabLayout()
       .compose(bindToLifecycle())
@@ -105,13 +98,18 @@ public final class DiscoveryActivity extends BaseActivity<DiscoveryViewModel> {
 
     viewModel.outputs.updateParamsForPage()
       .compose(bindToLifecycle())
-      .compose(observeForUI())
-      .subscribe(pp -> pagerAdapter.takeParams(pp.first, pp.second));
+      .observeOn(AndroidSchedulers.mainThread())
+      .subscribe(pagerAdapter::takeParams);
 
     viewModel.outputs.clearPages()
       .compose(bindToLifecycle())
       .compose(observeForUI())
       .subscribe(pagerAdapter::clearPages);
+
+    viewModel.outputs.rootCategoriesAndPosition()
+      .compose(bindToLifecycle())
+      .observeOn(AndroidSchedulers.mainThread())
+      .subscribe(cp -> pagerAdapter.takeCategoriesForPosition(cp.first, cp.second));
 
     viewModel.outputs.showBuildCheckAlert()
       .compose(bindToLifecycle())

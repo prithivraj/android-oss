@@ -57,9 +57,9 @@
     </activity>
 
     <activity
-      android:name=".ui.activities.CommentFeedActivity"
+      android:name=".ui.activities.CommentsActivity"
       android:parentActivityName=".ui.activities.ProjectActivity"
-      android:theme="@style/CommentFeedActivity">
+      android:theme="@style/CommentsActivity">
 
       <meta-data
         android:name="android.support.PARENT_ACTIVITY"
@@ -92,6 +92,14 @@
           android:host="www.kickstarter.com"
           android:scheme="https"
           android:pathPrefix="/discover" />
+      </intent-filter>
+
+      <intent-filter
+        android:autoVerify="true"
+        tools:ignore="UnusedAttribute">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
         <data
           android:host="www.kickstarter.com"
           android:scheme="ksr" />
@@ -256,6 +264,16 @@
     </activity>
 
     <activity
+      android:name=".ui.activities.ProjectUpdatesActivity"
+      android:parentActivityName=".ui.activities.ProjectActivity">
+
+      <meta-data
+        android:name="android.support.PARENT_ACTIVITY"
+        android:value=".ui.activities.ProjectActivity"/>
+
+    </activity>
+
+    <activity
       android:name=".ui.activities.SearchActivity"
       android:parentActivityName=".ui.activities.DiscoveryActivity"
       android:theme="@style/SearchActivity">
@@ -312,6 +330,16 @@
         android:name="android.support.PARENT_ACTIVITY"
         android:value=".ui.activities.LoginActivity"
         />
+
+    </activity>
+
+    <activity
+      android:name=".ui.activities.UpdateActivity"
+      android:parentActivityName=".ui.activities.ProjectUpdatesActivity">
+
+      <meta-data
+        android:name="android.support.PARENT_ACTIVITY"
+        android:value=".ui.activities.ProjectUpdatesActivity" />
 
     </activity>
 

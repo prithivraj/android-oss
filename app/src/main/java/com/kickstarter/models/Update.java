@@ -14,7 +14,7 @@ import auto.parcel.AutoParcel;
 @AutoGson
 @AutoParcel
 public abstract class Update implements Parcelable {
-  public abstract String body();
+  public abstract @Nullable String body();
   public abstract @Nullable Integer commentsCount();
   public abstract @Nullable Boolean hasLiked();
   public abstract long id();
@@ -74,7 +74,7 @@ public abstract class Update implements Parcelable {
     @AutoParcel
     @AutoGson
     public abstract static class Web implements Parcelable {
-      public abstract String likes();
+      public abstract @Nullable String likes();
       public abstract String update();
 
       @AutoParcel.Builder
@@ -114,7 +114,7 @@ public abstract class Update implements Parcelable {
 
   private static final int TRUNCATED_BODY_LENGTH = 400;
 
-  public String truncatedBody() {
+  public @NonNull String truncatedBody() {
     try {
       String str = Html.fromHtml(body()).toString();
       if (str.length() > TRUNCATED_BODY_LENGTH) {

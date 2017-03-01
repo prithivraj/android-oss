@@ -6,6 +6,7 @@ import android.support.annotation.Nullable;
 import com.kickstarter.libs.utils.KoalaUtils;
 import com.kickstarter.models.Activity;
 import com.kickstarter.models.Project;
+import com.kickstarter.models.Update;
 import com.kickstarter.services.DiscoveryParams;
 import com.kickstarter.services.apiresponses.PushNotificationEnvelope;
 import com.kickstarter.ui.data.LoginReason;
@@ -35,6 +36,10 @@ public final class Koala {
 
   public void trackMemoryWarning() {
     client.track("App Memory Warning");
+  }
+
+  public void trackOpenedAppBanner() {
+    client.track("Opened App Banner");
   }
 
   // ANDROID PAY
@@ -98,25 +103,70 @@ public final class Koala {
     }
   }
 
-  // COMMENTING
+  // COMMENTS
+  public void trackLoadedOlderComments(final @NonNull Project project, final @Nullable Update update,
+    final @NonNull KoalaContext.Comments context) {
+
+    final Map<String, Object> props = update == null
+      ? KoalaUtils.projectProperties(project)
+      : KoalaUtils.updateProperties(project, update);
+    props.put("context", context.getTrackingString());
+
+    client.track(KoalaEvent.LOADED_OLDER_COMMENTS, props);
+  }
+
+  /**
+   * @deprecated Use {@link #trackLoadedOlderComments(Project, Update, KoalaContext.Comments)} instead.
+   */
+  @Deprecated
+  public void trackLoadedOlderProjectComments(final @NonNull Project project) {
+    client.track(KoalaEvent.PROJECT_COMMENT_LOAD_OLDER, KoalaUtils.projectProperties(project));
+  }
+
+  public void trackPostedComment(final @NonNull Project project, final @Nullable Update update,
+    final @NonNull KoalaContext.CommentDialog context) {
+
+    final Map<String, Object> props = update == null
+      ? KoalaUtils.projectProperties(project)
+      : KoalaUtils.updateProperties(project, update);
+    props.put("context", context.getTrackingString());
+
+    client.track(KoalaEvent.POSTED_COMMENT, props);
+  }
+
+  /**
+   * @deprecated Use {@link #trackPostedComment(Project, Update, KoalaContext.CommentDialog)} instead.
+   */
+  @Deprecated
   public void trackProjectCommentCreate(final @NonNull Project project) {
-    client.track("Project Comment Create", KoalaUtils.projectProperties(project));
+    client.track(KoalaEvent.PROJECT_COMMENT_CREATE, KoalaUtils.projectProperties(project));
   }
 
+  /**
+   * @deprecated Use {@link #trackViewedComments(Project, Update, KoalaContext.Comments)} instead.
+   */
+  @Deprecated
   public void trackProjectCommentsView(final @NonNull Project project) {
-    client.track("Project Comment View", KoalaUtils.projectProperties(project));
+    client.track(KoalaEvent.PROJECT_COMMENT_VIEW, KoalaUtils.projectProperties(project));
   }
 
-  public void trackProjectCommentLoadMore(final @NonNull Project project) {
-    client.track("Project Comment Load Older", KoalaUtils.projectProperties(project));
+  public void trackViewedComments(final @NonNull Project project, final @Nullable Update update,
+    final @NonNull KoalaContext.Comments context) {
+
+    final Map<String, Object> props = update == null
+      ? KoalaUtils.projectProperties(project)
+      : KoalaUtils.updateProperties(project, update);
+
+    props.put("context", context.getTrackingString());
+    client.track(KoalaEvent.VIEWED_COMMENTS, props);
   }
 
   // ACTIVITY
   public void trackActivityView(final int pageCount) {
     if (pageCount == 0) {
-      client.track("Activity View");
+      client.track(KoalaEvent.ACTIVITY_VIEW);
     } else {
-      client.track("Activity Load More", new HashMap<String, Object>() {
+      client.track(KoalaEvent.ACTIVITY_LOAD_MORE, new HashMap<String, Object>() {
         {
           put("page_count", pageCount);
         }
@@ -147,7 +197,7 @@ public final class Koala {
   }
 
   public void trackActivityTapped(final @NonNull Activity activity) {
-    client.track("Activity View Item", KoalaUtils.activityProperties(activity));
+    client.track(KoalaEvent.ACTIVITY_VIEW_ITEM, KoalaUtils.activityProperties(activity));
   }
 
   // SESSION EVENTS
@@ -352,6 +402,17 @@ public final class Koala {
     client.track("Project Video Start", KoalaUtils.projectProperties(project));
   }
 
+  // PROJECT UPDATES
+  public void trackViewedUpdate(final @NonNull Project project, final @NonNull KoalaContext.Update context) {
+    final Map<String, Object> props = KoalaUtils.projectProperties(project);
+    props.put("context", context.getTrackingString());
+    client.track(KoalaEvent.VIEWED_UPDATE, props);
+  }
+
+  public void trackViewedUpdates(final @NonNull Project project) {
+    client.track(KoalaEvent.VIEWED_UPDATES, KoalaUtils.projectProperties(project));
+  }
+
   // PUSH NOTIFICATIONS
   public void trackPushNotification(final @NonNull PushNotificationEnvelope envelope) {
     final Map<String, Object> properties = new HashMap<String, Object>() {
@@ -366,5 +427,13 @@ public final class Koala {
     };
 
     client.track("Notification Opened", properties);
+  }
+
+  // WEBVIEWS
+  public void trackOpenedExternalLink(final @NonNull Project project, final @NonNull KoalaContext.ExternalLink context) {
+    final Map<String, Object> props = KoalaUtils.projectProperties(project);
+    props.put("context", context.getTrackingString());
+
+    client.track(KoalaEvent.OPENED_EXTERNAL_LINK, props);
   }
 }
